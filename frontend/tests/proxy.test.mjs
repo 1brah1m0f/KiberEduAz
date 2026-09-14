@@ -46,3 +46,14 @@ test("a signed-out visitor can open the public about page", async () => {
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("location"), null);
 });
+
+test("proxied pages enforce the nonce-based Content Security Policy", async () => {
+  currentUser = { id: "signed-in-user" };
+  const response = await proxy(new NextRequest("http://localhost:3000/dashboard"));
+  const policy = response.headers.get("content-security-policy");
+
+  assert.ok(policy, "the enforcing CSP response header must be present");
+  assert.equal(response.headers.get("content-security-policy-report-only"), null);
+  assert.match(policy, /script-src[^;]*'nonce-[^']+'/);
+  assert.match(policy, /'strict-dynamic'/);
+});

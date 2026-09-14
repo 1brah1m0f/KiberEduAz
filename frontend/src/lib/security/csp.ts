@@ -5,10 +5,11 @@
 /// headers in next.config.ts must not also send a CSP, or the two would be
 /// intersected by the browser.
 ///
-/// Still shipped as Report-Only. Flip `CSP_HEADER` to the enforcing name once
-/// the violation reports have been reviewed.
+/// Enforced since 2026-09-14 after the report-only observation period. Keep
+/// this as the only CSP header; adding another policy in next.config.ts would
+/// intersect with this nonce-based policy and can block Next.js scripts.
 
-export const CSP_HEADER = "Content-Security-Policy-Report-Only";
+export const CSP_HEADER = "Content-Security-Policy";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
@@ -66,8 +67,8 @@ export function buildCsp(nonce: string): string {
     "object-src 'none'",
     `script-src ${scriptSrc.join(" ")}`,
     // Tailwind and framer-motion set style attributes; nonces do not cover
-    // those, so styles stay on 'unsafe-inline'. That is a much smaller
-    // surface than inline scripts.
+    // those, so styles stay on 'unsafe-inline'. This accepted low-risk
+    // exception is documented in docs/security-csp-accepted-risk.md.
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data:",

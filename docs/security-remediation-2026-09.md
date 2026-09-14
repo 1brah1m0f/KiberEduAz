@@ -46,7 +46,7 @@ Not from any report. Found by tracing what the first pass touched.
 | F-14 only covered listings. `GET /rooms/:slug` and `GET /paths` still showed a teacher every other teacher's draft; a teacher could attach a room to somebody else's unreviewed draft module | Same published-or-own rule on `findBySlug`, on `tree` at every level, and on module attachment (create + re-parent) | `rooms.service.ts`, `paths.service.ts` | `65624d1` |
 | `avatarKey` accepted arbitrary text up to 40 chars | `@Matches(/^[a-z][a-z0-9-]{0,39}$/)` | `update-profile.dto.ts` | `4e59c19` |
 | **F-06 guard had a hole**: `/%5Cevil.com` passed — the raw checks never saw the backslash and URL resolution keeps the escape. Found by writing the tests | Same checks repeated on the decoded form; malformed escapes rejected. 17 payloads tested | `site-url.ts`, `tests/site-url.test.mjs` | `9fee509` |
-| CSP `script-src 'unsafe-inline'` neutered the one directive that matters against XSS | Per-request nonce minted in the proxy, handed to Next.js via `x-nonce`/CSP request headers; `'strict-dynamic'`; static CSP removed from `next.config.ts` (two policies intersect). Still Report-Only | `proxy.ts`, `lib/security/csp.ts`, `next.config.ts` | `be2ce74` |
+| CSP `script-src 'unsafe-inline'` neutered the one directive that matters against XSS | Per-request nonce minted in the proxy, handed to Next.js via `x-nonce`/CSP request headers; `'strict-dynamic'`; static CSP removed from `next.config.ts` (two policies intersect). Initially Report-Only; enforced on 14 Sep 2026 | `proxy.ts`, `lib/security/csp.ts`, `next.config.ts` | `be2ce74` |
 | `DELETE /profiles/me` had no UI | Danger-zone section with typed confirmation; signs out and lands on `/login` | `delete-account.tsx`, `profile/page.tsx` | `4641e99` |
 | **No password reset existed at all** | `/forgot-password` → `resetPasswordForEmail` with `redirectTo` pinned to the site URL → `/auth/callback?next=/reset-password` → `updateUser({ password })`. Same response whether or not the address exists | `password-reset.tsx`, two pages, login link | `2074195` |
 | Purge had no scheduler | `@nestjs/schedule`, nightly 03:00, in-process, idempotent, never throws out of the tick | `account-deletion.service.ts` | `4fed9d6` |
@@ -192,9 +192,10 @@ but leaves authored `Path`/`Module`/`Room` rows with `created_by_id = null`, so
 a deletion cannot take a published curriculum down. If your retention policy
 says otherwise, that's a product decision with a different implementation.
 
-**CSP is Report-Only.** It will not block anything yet. Review the violation
-reports, then flip the header name to `Content-Security-Policy`. Next.js inlines
-its bootstrap without a nonce, so `'unsafe-inline'` in `script-src` is what makes
-it survivable today; a nonce via middleware would be the stricter follow-up.
+**CSP enforcement completed on 14 Sep 2026.** The per-request nonce policy is
+now sent as `Content-Security-Policy`, not Report-Only. `script-src` remains
+protected by the nonce and `'strict-dynamic'`. The intentionally retained
+`style-src 'unsafe-inline'` exception, its mitigations, and review triggers are
+recorded in `docs/security-csp-accepted-risk.md`.
 
 **`.env.example` values left real** — see the C-001/C-002 row above.
