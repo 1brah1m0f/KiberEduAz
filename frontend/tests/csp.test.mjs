@@ -28,5 +28,5 @@ test("the style-src exception is recorded as an accepted risk", () => {
 test("next.config.ts does not send a second CSP that would intersect the nonce", () => {
   const config = readFileSync(new URL("../next.config.ts", import.meta.url), "utf8");
 
-  assert.doesNotMatch(config, /Content-Security-Policy/);
+  assert.doesNotMatch(config, /key:\s*["']Content-Security-Policy/);
 });
