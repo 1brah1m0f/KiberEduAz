@@ -83,10 +83,13 @@ Sağlamlıq yoxlaması: `curl http://localhost:4000/api/v1/health`
 cd frontend
 npm install
 cp .env.example .env.local    # PowerShell: Copy-Item .env.example .env.local
-npm run dev                   # http://localhost:3000
 ```
 
-`.env.example` içindəki dəyərlər (Supabase URL və publishable key) real və açıq paylaşıla biləndir, ona görə əlavə dəyişiklik tələb olunmur.
+`.env.example` yalnız placeholder saxlayır. `NEXT_PUBLIC_SUPABASE_URL` və `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` dəyərlərini Supabase Dashboard → **Project Settings → API Keys**-dən götür. Publishable (anon) açar client-side üçün nəzərdə tutulub, amma onu README-yə və ya ticket-ə yapışdırma — Data API açıq qalsa köhnə cədvəllərə yol açır.
+
+```bash
+npm run dev                   # http://localhost:3000
+```
 
 Frontend keyfiyyət yoxlamaları:
 
@@ -135,11 +138,11 @@ Bütün KiberEduAz cədvəllərində RLS aktivdir və heç bir policy yoxdur —
 `backend/prisma/manual/` qovluğunda iki köməkçi skript var:
 
 - `seed_content.sql` — Room məzmununu Dashboard-dan birbaşa yükləmək üçün (`npm run seed` alternativi)
-- `drop_legacy_tables.sql` — layihədə qalmış köhnə turizm cədvəllərini silmək üçün
+- `drop_legacy_tables.sql` — əvvəlki, istifadə olunmayan layihədən qalmış cədvəlləri silmək üçün. Yalnız backup və restore drill-dən sonra.
 
 ### ⚠️ Köhnə cədvəllər
 
-Supabase layihəsi əvvəlki turizm layihəsindən 7 cədvəl saxlayır: `User`, `TouristProfile`, `EntrepreneurProfile`, `Place`, `Booking`, `Review`, `CoinTransaction`. Hamısı boşdur. `20260911000200_rls_legacy_tables` migration-ı onlarda RLS-i yandırıb `anon`/`authenticated` icazələrini geri alır, yəni tətbiq olunandan sonra publishable açarla oxunmurlar. KiberEduAz onlardan istifadə etmir; backup götürdükdən sonra `drop_legacy_tables.sql` ilə tamamilə sil.
+Bu Supabase instansı əvvəlki, KiberEduAz-ın istifadə etmədiyi bir layihənin cədvəllərini də saxlayır. `20260911000200_rls_legacy_tables` migration-ı onlarda RLS-i yandırır və `anon`/`authenticated` icazələrini geri alır. Publishable açarı README-də saxlamayın; Data API-ni Dashboard-da söndürün (backend PostgREST istifadə etmir). Backup + restore drill-dən sonra `drop_legacy_tables.sql` ilə silin.
 
 ## Deploy
 
@@ -161,7 +164,7 @@ Sıra vacibdir: **əvvəlcə backend deploy olunur → URL alınır → Vercel-�
 |---|---|
 | `DATABASE_URL` | Supabase → **Connect** → Transaction pooler (port `6543`). Sətri olduğu kimi kopyala, `[YOUR-PASSWORD]` yerinə DB parolunu yaz və sonuna `?pgbouncer=true&connection_limit=10&pool_timeout=20` əlavə et. |
 | `DIRECT_URL` | Supabase → **Connect** → Session pooler (port `5432`), eyni parolla. Yalnız Prisma migration-ları üçün. |
-| `SUPABASE_PUBLISHABLE_KEY` | Supabase → **Project Settings → API Keys** → publishable key |
+| `SUPABASE_PUBLISHABLE_KEY` | Supabase → **Project Settings → API Keys** → publishable key. README-yə yazma. |
 | `SUPABASE_SECRET_KEY` | Supabase → **Project Settings → API Keys** → secret key. **Heç vaxt frontend-ə vermə.** |
 | `SUPABASE_JWT_SECRET` | Yalnız layihə köhnə HS256 açarı ilə token verirsə lazımdır (**Project Settings → JWT Keys**). Asimmetrik açar istifadə olunursa bu dəyişəni tamamilə buraxma — backend JWKS ilə yoxlayır. |
 | `CORS_ORIGINS` | Vercel-dən alınacaq production domeni (3-cü addım) |
@@ -170,7 +173,7 @@ Sıra vacibdir: **əvvəlcə backend deploy olunur → URL alınır → Vercel-�
 
 - **Host-u əldən yazma.** Pooler hostu hər layihə üçün fərqlidir; bu layihə `aws-1-ap-southeast-2.pooler.supabase.com` üzərindədir, `aws-0` deyil. `aws-0` üçün DNS və TCP işlədiyindən xəta aldadıcı olur: Prisma `Can't reach database server` deyir, əsl səbəb isə Supavisor-un `tenant/user not found` cavabıdır. Ona görə sətri həmişə **Dashboard → Connect**-dən kopyala.
 - **`connection_limit=1` yazma.** O dəyər yalnız serverless üçün doğrudur. NestJS uzunömürlü prosesdir və hər səhifə bir neçə paralel sorğu atır, ona görə `1` limiti ilə `P2024 – Timed out fetching a new connection from the connection pool` alınır və hətta `/health` də 500 qaytarır. Düzgün dəyər: `?pgbouncer=true&connection_limit=10&pool_timeout=20`.
-- **Parolu percent-encode et.** URL-də `@ # / : ? &` simvolları xüsusi məna daşıyır, ona görə parolda varsa kodlaşdırılmalıdır (`@` → `%40`, `#` → `%23`, `/` → `%2F`, `:` → `%3A`, `?` → `%3F`, `&` → `%26`). Bu layihənin parolunda `@` var — kodlaşdırılmasa Prisma sətri səhv yerdən bölür.
+- **Parolu percent-encode et.** URL-də `@ # / : ? &` simvolları xüsusi məna daşıyır, ona görə parolda varsa kodlaşdırılmalıdır (`@` → `%40`, `#` → `%23`, `/` → `%2F`, `:` → `%3A`, `?` → `%3F`, `&` → `%26`). Kodlaşdırılmasa Prisma sətri səhv yerdən bölür.
 
 `NODE_ENV`, `NODE_VERSION`, `SUPABASE_URL` və `SUPABASE_PROJECT_REF` `render.yaml`-da hazırdır — əl ilə yazmaq lazım deyil. `PORT` dəyişənini **təyin etmə**: onu Render özü verir, tətbiq `0.0.0.0:$PORT`-a bind olunur.
 
@@ -185,7 +188,7 @@ Sıra vacibdir: **əvvəlcə backend deploy olunur → URL alınır → Vercel-�
 | `NEXT_PUBLIC_SITE_URL` | Saytın public origin-i, sonda `/` olmadan, məsələn `https://kiberedu.vercel.app`. Bütün auth e-poçtları (təsdiq, parol sıfırlama) linkini bundan qurur və `/auth/callback` yönləndirməni buna bağlayır. Vercel-də **isteğe bağlıdır**: təyin edilməsə tətbiq Vercel-in öz `VERCEL_PROJECT_PRODUCTION_URL` dəyişəninə düşür. Öz domenin olanda mütləq açıq yaz — Vercel dəyişəni `*.vercel.app`-ı göstərməyə davam edir. Vercel-dən kənarda production-da məcburidir. |
 | `NEXT_PUBLIC_API_URL` | Render URL-i + prefiks, məsələn `https://kiberedu-api.onrender.com/api/v1` |
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://okyhjpywngmportlzmxo.supabase.co` |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase publishable key (açıq paylaşıla bilər) |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Dashboard → API Keys → publishable key. Client identifikatorudur, amma README/ticket-ə yapışdırma. |
 
 4. Deploy et və verilən domeni (məsələn `https://kiberedu.vercel.app`) qeyd et.
 
@@ -248,8 +251,9 @@ Tam siyahı və əl ilə görüləcək addımlar: `docs/security-remediation-202
 ## Təhlükəsizlik qaydaları
 
 - `SUPABASE_SECRET_KEY`, `SUPABASE_JWT_SECRET` və DB parolu heç vaxt repozitoriyaya düşməməlidir — `.env.example` yalnız placeholder saxlayır.
+- Publishable (anon) açarı README-yə, ticket-ə və ya chat-ə yapışdırma. Backend PostgREST istifadə etmir — Supabase Dashboard-da **Data API-ni söndürün**.
 - Düzgün cavablar API cavablarında yalnız müəllim/admin rolları üçün və ya sual həll edildikdən sonra göründür.
-- Cavab göndərilməsi rate-limit ilə qorunur.
+- Cavab göndərilməsi, otaq/path yaradılması və müəllim sorğusu per-route rate-limit ilə qorunur.
 
 ## Komanda
 

@@ -1,8 +1,12 @@
--- Leftovers from the unrelated tourism project this Supabase instance was
--- created for. All seven were verified empty (0 rows) on 2026-08-11 before the
+-- Leftovers from the unrelated previous project on this Supabase instance.
+-- All seven were verified empty (0 rows) on 2026-08-11 before the
 -- KiberEduAz schema was installed alongside them.
 --
--- Run this only after confirming nothing still depends on them.
+-- Run this only after:
+--   1. a backup / PITR restore drill has succeeded
+--   2. the Data API is disabled (Settings -> API) so a missed table cannot
+--      be read with the publishable key
+--   3. confirming nothing still depends on them
 
 drop table if exists public."CoinTransaction" cascade;
 drop table if exists public."Review" cascade;
