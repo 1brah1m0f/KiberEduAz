@@ -6,6 +6,37 @@
 -- The important one is profiles.deleted_at: JwtAuthGuard loads the whole
 -- profile row on EVERY authenticated request, so if that column is absent the
 -- entire API returns 500 - not just the deletion feature.
+--
+-- Do not `SELECT` from `_prisma_migrations` directly. Postgres errors if the
+-- relation is missing even when wrapped in `WHERE to_regclass(...) IS NOT
+-- NULL`, and a missing table is the production state this file is meant to
+-- detect (Prisma has never been baselined).
+
+create or replace function pg_temp.prisma_migration_summary()
+returns table(
+  applied_migrations bigint,
+  last_applied timestamptz,
+  unfinished_migrations bigint
+)
+language plpgsql
+as $$
+begin
+  if to_regclass('public._prisma_migrations') is null then
+    applied_migrations := 0;
+    last_applied := null;
+    unfinished_migrations := 0;
+    return next;
+    return;
+  end if;
+
+  return query execute
+    'select
+       count(*)::bigint,
+       max(finished_at),
+       count(*) filter (where finished_at is null)::bigint
+     from public._prisma_migrations';
+end;
+$$;
 
 select
   item,
@@ -14,6 +45,11 @@ select
   breaks_what
 from (
   values
+    (
+      '0. _prisma_migrations bookkeeping',
+      to_regclass('public._prisma_migrations') is not null,
+      'prisma migrate deploy has never run; remaining checks can still be OK if SQL was applied by hand'
+    ),
     (
       '1. learning_modules.created_by_id  (20260911000000)',
       to_regclass('public.learning_modules') is not null and exists (
@@ -72,25 +108,8 @@ from (
 ) as checks(item, present, breaks_what)
 order by item;
 
--- Has Prisma been baselined at all? If this returns 0 rows, `prisma migrate
--- deploy` has never run against this database and needs `npm run
--- prisma:baseline` from a workstation first (see README, "Prisma
--- migration-lari haqqinda").
 select
-  coalesce(count(*), 0) as applied_migrations,
-  max(finished_at)      as last_applied
-from public._prisma_migrations
-where to_regclass('public._prisma_migrations') is not null;
-
--- Half-applied deploys. Any row here means the API must refuse to boot
--- (PrismaService fail-fast). Confirm whether the SQL actually ran before
--- `prisma migrate resolve --applied <migration_name>`.
-select
-  migration_name,
-  started_at,
-  finished_at,
-  rolled_back_at,
-  logs
-from public._prisma_migrations
-where to_regclass('public._prisma_migrations') is not null
-  and finished_at is null;
+  applied_migrations,
+  last_applied,
+  unfinished_migrations
+from pg_temp.prisma_migration_summary();
