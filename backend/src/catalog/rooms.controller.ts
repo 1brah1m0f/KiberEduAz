@@ -11,9 +11,11 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { ContentStatus, UserRole } from '@prisma/client';
 import { CurrentUser, Roles } from '../auth/decorators';
 import type { AuthenticatedUser } from '../auth/auth.types';
+import { CREATE_ROOM_THROTTLE } from '../common/throttle.policies';
 import { RoomsService } from './rooms.service';
 import { RoomQueryDto, UpsertRoomDto, UpsertTaskDto } from './dto/content.dto';
 
@@ -42,6 +44,7 @@ export class RoomsController {
   }
 
   @Post()
+  @Throttle(CREATE_ROOM_THROTTLE)
   @Roles(UserRole.TEACHER, UserRole.ADMIN)
   create(@CurrentUser() user: AuthenticatedUser, @Body() dto: UpsertRoomDto) {
     return this.roomsService.create(user, dto);

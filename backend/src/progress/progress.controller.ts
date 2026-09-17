@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, ParseUUIDPipe, Post } from '@nestjs/commo
 import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../auth/decorators';
 import type { AuthenticatedUser } from '../auth/auth.types';
+import { ANSWER_THROTTLE } from '../common/throttle.policies';
 import { SubmitAnswerDto } from './dto/submit-answer.dto';
 import { ProgressService } from './progress.service';
 
@@ -22,7 +23,7 @@ export class ProgressController {
   /// Tighter than the global 120/min: short-answer questions are graded by
   /// exact match, so the global budget alone leaves room to brute-force a
   /// dictionary answer.
-  @Throttle({ default: { ttl: 60_000, limit: 30 } })
+  @Throttle(ANSWER_THROTTLE)
   @Post('questions/:questionId/answer')
   submitAnswer(
     @CurrentUser() user: AuthenticatedUser,

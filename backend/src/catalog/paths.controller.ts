@@ -11,8 +11,10 @@ import {
   Post,
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
+import { Throttle } from '@nestjs/throttler';
 import { CurrentUser, Roles } from '../auth/decorators';
 import type { AuthenticatedUser } from '../auth/auth.types';
+import { CREATE_PATH_THROTTLE } from '../common/throttle.policies';
 import { PathsService } from './paths.service';
 import { UpsertModuleDto, UpsertPathDto } from './dto/content.dto';
 
@@ -26,6 +28,7 @@ export class PathsController {
   }
 
   @Post()
+  @Throttle(CREATE_PATH_THROTTLE)
   @Roles(UserRole.TEACHER, UserRole.ADMIN)
   create(@CurrentUser() user: AuthenticatedUser, @Body() dto: UpsertPathDto) {
     return this.pathsService.createPath(user, dto);

@@ -12,6 +12,7 @@ import { Throttle } from '@nestjs/throttler';
 import { UserRole } from '@prisma/client';
 import { CurrentUser, Roles } from '../auth/decorators';
 import type { AuthenticatedUser } from '../auth/auth.types';
+import { REQUEST_TEACHER_THROTTLE } from '../common/throttle.policies';
 import {
   ChangeRoleDto,
   RequestTeacherDto,
@@ -40,9 +41,9 @@ export class ProfilesController {
 
   /// Any authenticated student can apply to become a teacher. Access stays
   /// locked until an admin approves the account.
-  /// Escalation request: a handful a day is plenty, and a flood of them is
+  /// Escalation request: a handful an hour is plenty, and a flood of them is
   /// either abuse or an attempt to bury a real application in an admin queue.
-  @Throttle({ default: { ttl: 86_400_000, limit: 5 } })
+  @Throttle(REQUEST_TEACHER_THROTTLE)
   @Post('me/request-teacher')
   requestTeacher(@CurrentUser() user: AuthenticatedUser, @Body() dto: RequestTeacherDto) {
     return this.profilesService.requestTeacher(user, dto);
