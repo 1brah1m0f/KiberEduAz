@@ -3,10 +3,10 @@
 -- everything cascading off it is purged after the restore window.
 --
 -- Nullable, so every existing profile is "not deleted" without a backfill.
+-- Idempotent: if this column is missing, every authenticated API request 500s.
 ALTER TABLE "profiles"
-  ADD COLUMN "deleted_at" TIMESTAMPTZ(6);
+  ADD COLUMN IF NOT EXISTS "deleted_at" TIMESTAMPTZ(6);
 
--- Partial: the purge job only ever scans the handful of deleted rows.
-CREATE INDEX "profiles_deleted_at_idx"
+CREATE INDEX IF NOT EXISTS "profiles_deleted_at_idx"
   ON "profiles" ("deleted_at")
   WHERE "deleted_at" IS NOT NULL;

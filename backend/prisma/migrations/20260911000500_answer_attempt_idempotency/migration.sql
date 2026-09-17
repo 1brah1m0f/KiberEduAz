@@ -10,13 +10,13 @@
 -- PRE-FLIGHT: run prisma/manual/find_duplicate_correct_attempts.sql first.
 -- If it reports any duplicate pairs this statement fails and the whole
 -- migration is rolled back; nothing is deleted automatically on purpose.
-CREATE UNIQUE INDEX "answer_attempts_profile_question_correct_key"
+--
+-- Idempotent: IF NOT EXISTS so a later prisma migrate deploy succeeds after
+-- a hand apply. Duplicates still fail the CREATE, which is the point.
+CREATE UNIQUE INDEX IF NOT EXISTS "answer_attempts_profile_question_correct_key"
   ON "answer_attempts" ("profile_id", "question_id")
   WHERE "is_correct";
 
--- The room-completion bonus is paid at most once per learner and room, for
--- the same reason. Partial again, because QUESTION_CORRECT entries are
--- intentionally many per room.
-CREATE UNIQUE INDEX "points_ledger_room_completed_key"
+CREATE UNIQUE INDEX IF NOT EXISTS "points_ledger_room_completed_key"
   ON "points_ledger" ("profile_id", "room_id")
   WHERE "reason" = 'ROOM_COMPLETED';
