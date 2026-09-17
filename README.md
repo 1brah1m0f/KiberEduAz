@@ -83,10 +83,13 @@ Sağlamlıq yoxlaması: `curl http://localhost:4000/api/v1/health`
 cd frontend
 npm install
 cp .env.example .env.local    # PowerShell: Copy-Item .env.example .env.local
-npm run dev                   # http://localhost:3000
 ```
 
-`.env.example` içindəki dəyərlər (Supabase URL və publishable key) real və açıq paylaşıla biləndir, ona görə əlavə dəyişiklik tələb olunmur.
+`.env.example` yalnız placeholder saxlayır. `NEXT_PUBLIC_SUPABASE_URL` və `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` dəyərlərini Supabase Dashboard → **Project Settings → API Keys**-dən götür. Publishable (anon) açar client-side üçün nəzərdə tutulub, amma onu README-yə və ya ticket-ə yapışdırma — Data API açıq qalsa köhnə cədvəllərə yol açır.
+
+```bash
+npm run dev                   # http://localhost:3000
+```
 
 Frontend keyfiyyət yoxlamaları:
 
@@ -135,11 +138,11 @@ Bütün KiberEduAz cədvəllərində RLS aktivdir və heç bir policy yoxdur —
 `backend/prisma/manual/` qovluğunda iki köməkçi skript var:
 
 - `seed_content.sql` — Room məzmununu Dashboard-dan birbaşa yükləmək üçün (`npm run seed` alternativi)
-- `drop_legacy_tables.sql` — layihədə qalmış köhnə turizm cədvəllərini silmək üçün
+- `drop_legacy_tables.sql` — əvvəlki, istifadə olunmayan layihədən qalmış cədvəlləri silmək üçün. Yalnız backup və restore drill-dən sonra.
 
 ### ⚠️ Köhnə cədvəllər
 
-Supabase layihəsi əvvəlki turizm layihəsindən 7 cədvəl saxlayır: `User`, `TouristProfile`, `EntrepreneurProfile`, `Place`, `Booking`, `Review`, `CoinTransaction`. Hamısı boşdur. `20260911000200_rls_legacy_tables` migration-ı onlarda RLS-i yandırıb `anon`/`authenticated` icazələrini geri alır, yəni tətbiq olunandan sonra publishable açarla oxunmurlar. KiberEduAz onlardan istifadə etmir; backup götürdükdən sonra `drop_legacy_tables.sql` ilə tamamilə sil.
+Bu Supabase instansı əvvəlki, KiberEduAz-ın istifadə etmədiyi bir layihənin cədvəllərini də saxlayır. `20260911000200_rls_legacy_tables` migration-ı onlarda RLS-i yandırır və `anon`/`authenticated` icazələrini geri alır. Publishable açarı README-də saxlamayın; Data API-ni Dashboard-da söndürün (backend PostgREST istifadə etmir). Backup + restore drill-dən sonra `drop_legacy_tables.sql` ilə silin.
 
 ## Deploy
 
@@ -248,8 +251,9 @@ Tam siyahı və əl ilə görüləcək addımlar: `docs/security-remediation-202
 ## Təhlükəsizlik qaydaları
 
 - `SUPABASE_SECRET_KEY`, `SUPABASE_JWT_SECRET` və DB parolu heç vaxt repozitoriyaya düşməməlidir — `.env.example` yalnız placeholder saxlayır.
+- Publishable (anon) açarı README-yə, ticket-ə və ya chat-ə yapışdırma. Backend PostgREST istifadə etmir — Supabase Dashboard-da **Data API-ni söndürün**.
 - Düzgün cavablar API cavablarında yalnız müəllim/admin rolları üçün və ya sual həll edildikdən sonra göründür.
-- Cavab göndərilməsi rate-limit ilə qorunur.
+- Cavab göndərilməsi, otaq/path yaradılması və müəllim sorğusu per-route rate-limit ilə qorunur.
 
 ## Komanda
 
