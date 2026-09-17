@@ -81,3 +81,16 @@ select
   max(finished_at)      as last_applied
 from public._prisma_migrations
 where to_regclass('public._prisma_migrations') is not null;
+
+-- Half-applied deploys. Any row here means the API must refuse to boot
+-- (PrismaService fail-fast). Confirm whether the SQL actually ran before
+-- `prisma migrate resolve --applied <migration_name>`.
+select
+  migration_name,
+  started_at,
+  finished_at,
+  rolled_back_at,
+  logs
+from public._prisma_migrations
+where to_regclass('public._prisma_migrations') is not null
+  and finished_at is null;

@@ -82,8 +82,55 @@ async function main() {
   }
 
   prisma('migrate', 'deploy');
+  await assertBootSchema();
 
   console.log('\nMigrations are up to date.');
+}
+
+/// Same fail-fast the API runs at boot. Catches a `migrate resolve --applied`
+/// that marked a migration done without the SQL actually landing, which would
+/// otherwise ship new code against a schema that 500s every authenticated call.
+async function assertBootSchema() {
+  const client = new PrismaClient({
+    datasources: { db: { url: process.env.DIRECT_URL ?? process.env.DATABASE_URL } },
+  });
+
+  try {
+    const unfinished = await client.$queryRaw`
+      SELECT migration_name
+      FROM _prisma_migrations
+      WHERE finished_at IS NULL
+    `;
+
+    if (unfinished.length > 0) {
+      const names = unfinished.map((row) => row.migration_name).join(', ');
+
+      throw new Error(
+        `Unfinished Prisma migrations after deploy: ${names}. ` +
+          '`_prisma_migrations.finished_at` is NULL. Inspect `logs`; only run ' +
+          '`prisma migrate resolve --applied <name>` after confirming the SQL applied.',
+      );
+    }
+
+    const [row] = await client.$queryRaw`
+      SELECT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'profiles'
+          AND column_name = 'deleted_at'
+      ) AS has_deleted_at
+    `;
+
+    if (row?.has_deleted_at !== true && row?.has_deleted_at !== 't') {
+      throw new Error(
+        '`profiles.deleted_at` is still missing after migrate deploy. ' +
+          'JwtAuthGuard reads this column on every authenticated request.',
+      );
+    }
+  } finally {
+    await client.$disconnect();
+  }
 }
 
 main().catch((error) => {
