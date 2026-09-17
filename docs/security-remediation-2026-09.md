@@ -198,4 +198,32 @@ protected by the nonce and `'strict-dynamic'`. The intentionally retained
 `style-src 'unsafe-inline'` exception, its mitigations, and review triggers are
 recorded in `docs/security-csp-accepted-risk.md`.
 
-**`.env.example` values left real** — see the C-001/C-002 row above.
+**`.env.example` no longer holds the production publishable key.** Follow-up
+on 17 Sep 2026 after the Data API leak: placeholders only; copy keys from the
+Dashboard. See §5.
+
+---
+
+## 5. Follow-up — 17 Sep 2026 live report
+
+Code changes in this pass: boot fail-fast on unfinished Prisma migrations
+(`finished_at IS NULL` / missing `profiles.deleted_at`), per-route throttles
+on `POST /rooms`, `POST /paths` and `POST /profiles/me/request-teacher`,
+`multer` / `deepmerge-ts` overrides, and removal of the committed publishable
+key plus the legacy table map from README / `.env.example`.
+
+Still operator-only (no code path):
+
+1. **BE-1 / BE-2 in production:** confirm `prisma migrate deploy` actually
+   applied `20260911000200_rls_legacy_tables` and
+   `20260911000300_account_deletion`. Paste
+   `backend/prisma/manual/check_migration_state.sql` into the SQL Editor.
+2. **Disable the Data API** (Supabase → Settings → API). The Nest API does
+   not use PostgREST.
+3. **Reset every leaked User password**, including admin, plus the two test
+   accounts whose passwords appeared in chat.
+4. **Auth policy:** min password length 10, leaked-password protection ON,
+   token endpoint ≈30 / 15 min, signup ≈30 / hour. Optional TOTP.
+5. **PITR or scheduled `pg_dump`**, then a restore drill. Only then run
+   `drop_legacy_tables.sql`.
+
