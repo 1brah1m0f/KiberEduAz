@@ -164,7 +164,7 @@ Sıra vacibdir: **əvvəlcə backend deploy olunur → URL alınır → Vercel-�
 |---|---|
 | `DATABASE_URL` | Supabase → **Connect** → Transaction pooler (port `6543`). Sətri olduğu kimi kopyala, `[YOUR-PASSWORD]` yerinə DB parolunu yaz və sonuna `?pgbouncer=true&connection_limit=10&pool_timeout=20` əlavə et. |
 | `DIRECT_URL` | Supabase → **Connect** → Session pooler (port `5432`), eyni parolla. Yalnız Prisma migration-ları üçün. |
-| `SUPABASE_PUBLISHABLE_KEY` | Supabase → **Project Settings → API Keys** → publishable key |
+| `SUPABASE_PUBLISHABLE_KEY` | Supabase → **Project Settings → API Keys** → publishable key. README-yə yazma. |
 | `SUPABASE_SECRET_KEY` | Supabase → **Project Settings → API Keys** → secret key. **Heç vaxt frontend-ə vermə.** |
 | `SUPABASE_JWT_SECRET` | Yalnız layihə köhnə HS256 açarı ilə token verirsə lazımdır (**Project Settings → JWT Keys**). Asimmetrik açar istifadə olunursa bu dəyişəni tamamilə buraxma — backend JWKS ilə yoxlayır. |
 | `CORS_ORIGINS` | Vercel-dən alınacaq production domeni (3-cü addım) |
@@ -173,7 +173,7 @@ Sıra vacibdir: **əvvəlcə backend deploy olunur → URL alınır → Vercel-�
 
 - **Host-u əldən yazma.** Pooler hostu hər layihə üçün fərqlidir; bu layihə `aws-1-ap-southeast-2.pooler.supabase.com` üzərindədir, `aws-0` deyil. `aws-0` üçün DNS və TCP işlədiyindən xəta aldadıcı olur: Prisma `Can't reach database server` deyir, əsl səbəb isə Supavisor-un `tenant/user not found` cavabıdır. Ona görə sətri həmişə **Dashboard → Connect**-dən kopyala.
 - **`connection_limit=1` yazma.** O dəyər yalnız serverless üçün doğrudur. NestJS uzunömürlü prosesdir və hər səhifə bir neçə paralel sorğu atır, ona görə `1` limiti ilə `P2024 – Timed out fetching a new connection from the connection pool` alınır və hətta `/health` də 500 qaytarır. Düzgün dəyər: `?pgbouncer=true&connection_limit=10&pool_timeout=20`.
-- **Parolu percent-encode et.** URL-də `@ # / : ? &` simvolları xüsusi məna daşıyır, ona görə parolda varsa kodlaşdırılmalıdır (`@` → `%40`, `#` → `%23`, `/` → `%2F`, `:` → `%3A`, `?` → `%3F`, `&` → `%26`). Bu layihənin parolunda `@` var — kodlaşdırılmasa Prisma sətri səhv yerdən bölür.
+- **Parolu percent-encode et.** URL-də `@ # / : ? &` simvolları xüsusi məna daşıyır, ona görə parolda varsa kodlaşdırılmalıdır (`@` → `%40`, `#` → `%23`, `/` → `%2F`, `:` → `%3A`, `?` → `%3F`, `&` → `%26`). Kodlaşdırılmasa Prisma sətri səhv yerdən bölür.
 
 `NODE_ENV`, `NODE_VERSION`, `SUPABASE_URL` və `SUPABASE_PROJECT_REF` `render.yaml`-da hazırdır — əl ilə yazmaq lazım deyil. `PORT` dəyişənini **təyin etmə**: onu Render özü verir, tətbiq `0.0.0.0:$PORT`-a bind olunur.
 
@@ -188,7 +188,7 @@ Sıra vacibdir: **əvvəlcə backend deploy olunur → URL alınır → Vercel-�
 | `NEXT_PUBLIC_SITE_URL` | Saytın public origin-i, sonda `/` olmadan, məsələn `https://kiberedu.vercel.app`. Bütün auth e-poçtları (təsdiq, parol sıfırlama) linkini bundan qurur və `/auth/callback` yönləndirməni buna bağlayır. Vercel-də **isteğe bağlıdır**: təyin edilməsə tətbiq Vercel-in öz `VERCEL_PROJECT_PRODUCTION_URL` dəyişəninə düşür. Öz domenin olanda mütləq açıq yaz — Vercel dəyişəni `*.vercel.app`-ı göstərməyə davam edir. Vercel-dən kənarda production-da məcburidir. |
 | `NEXT_PUBLIC_API_URL` | Render URL-i + prefiks, məsələn `https://kiberedu-api.onrender.com/api/v1` |
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://okyhjpywngmportlzmxo.supabase.co` |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase publishable key (açıq paylaşıla bilər) |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Dashboard → API Keys → publishable key. Client identifikatorudur, amma README/ticket-ə yapışdırma. |
 
 4. Deploy et və verilən domeni (məsələn `https://kiberedu.vercel.app`) qeyd et.
 
