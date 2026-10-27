@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { TeacherConsole } from "@/components/teacher/teacher-console";
 import { apiFetch } from "@/lib/api/server";
 import { requireProfile } from "@/lib/api/viewer";
-import type { ClassSummary, PathTreeNode, RoomSummary } from "@/lib/api/types";
+import type { ClassSummary, ClassDetail } from "@/lib/api/types";
 import { homePathFor } from "@/lib/auth/home-path";
 
 export const metadata: Metadata = {
@@ -18,18 +18,14 @@ export default async function TeacherPage() {
     redirect(homePathFor(profile));
   }
 
-  const [paths, rooms, classes] = await Promise.all([
-    apiFetch<PathTreeNode[]>("/paths"),
-    apiFetch<RoomSummary[]>("/rooms"),
-    apiFetch<ClassSummary[]>("/classes"),
-  ]);
+  const classes = await apiFetch<ClassSummary[]>("/classes");
+  const details = await Promise.all(classes.map((item) => apiFetch<ClassDetail>(`/classes/${item.id}`)));
 
   return (
     <main className="flex-1">
       <TeacherConsole
         profile={profile}
-        initialPaths={paths}
-        initialRooms={rooms}
+        initialDetails={details}
         initialClasses={classes}
       />
     </main>
