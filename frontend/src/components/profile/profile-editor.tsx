@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Check, Loader2, Save, ShieldCheck, Sparkles } from "lucide-react";
@@ -24,7 +25,8 @@ const FOCUS_TRACKS = [
 
 type ProfileEditorProps = {
   profile: MyProfile;
-  rank: Rank;
+  rank?: Rank;
+  teacherSummary?: { classes: number; students: number };
 };
 
 function Toggle({
@@ -49,7 +51,7 @@ function Toggle({
   );
 }
 
-export function ProfileEditor({ profile, rank }: ProfileEditorProps) {
+export function ProfileEditor({ profile, rank, teacherSummary }: ProfileEditorProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
 
@@ -102,7 +104,8 @@ export function ProfileEditor({ profile, rank }: ProfileEditorProps) {
     }
   }
 
-  const remaining = rank.nextThreshold ? Math.max(0, rank.nextThreshold - rank.currentPoints) : 0;
+  const isTeacher = profile.role === "TEACHER";
+  const remaining = rank?.nextThreshold ? Math.max(0, rank.nextThreshold - rank.currentPoints) : 0;
 
   return (
     <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-[1fr_350px]">
@@ -126,11 +129,12 @@ export function ProfileEditor({ profile, rank }: ProfileEditorProps) {
             <label className="profile-field"><span>Ad və soyad</span><input name="fullName" defaultValue={profile.fullName ?? ""} maxLength={120} /></label>
             <label className="profile-field"><span>İstifadəçi adı</span><input name="username" defaultValue={profile.username ?? ""} pattern="[a-z0-9._\-]{3,32}" title="3-32 simvol: kiçik hərf, rəqəm, nöqtə, tire" /></label>
             <label className="profile-field"><span>Təhsil müəssisəsi</span><input name="institutionName" defaultValue={profile.institutionName ?? ""} maxLength={160} /></label>
-            <label className="profile-field"><span>Sinif / qrup</span><input name="classLabel" defaultValue={profile.classLabel ?? ""} maxLength={80} /></label>
+            {!isTeacher && <label className="profile-field"><span>Sinif / qrup</span><input name="classLabel" defaultValue={profile.classLabel ?? ""} maxLength={80} /></label>}
             <label className="profile-field sm:col-span-2"><span>Haqqımda</span><textarea name="bio" rows={4} maxLength={600} defaultValue={profile.bio ?? ""} /></label>
           </div>
         </section>
 
+        {!isTeacher && (
         <section className="rounded-2xl border border-red-300/10 bg-[#1a1d1f] p-5 sm:p-7">
           <h2 className="text-base font-semibold text-white">Təlim seçimləri</h2>
           <p className="mt-1 text-[11px] text-slate-600">Sənə göstərilən missiyaları fərdiləşdir</p>
@@ -139,19 +143,33 @@ export function ProfileEditor({ profile, rank }: ProfileEditorProps) {
             <label className="profile-field"><span>Həftəlik hədəf</span><select name="weeklyGoal" defaultValue={String(profile.weeklyGoal)}><option value="3">3 task</option><option value="5">5 task</option><option value="10">10 task</option></select></label>
           </div>
         </section>
+        )}
       </div>
 
       <aside className="space-y-6">
+        {isTeacher ? (
+          <section className="rounded-2xl border border-emerald-300/15 bg-[#1a1d1f] p-6">
+            <ShieldCheck className="size-6 text-emerald-300" aria-hidden="true" />
+            <h2 className="mt-4 text-xl font-semibold text-white">Müəllim profili</h2>
+            <p className="mt-2 text-sm text-slate-400">{profile.accountStatus === "ACTIVE" ? "Təsdiqlənmiş müəllim" : "Təsdiq gözlənilir"}</p>
+            <dl className="mt-5 space-y-3 text-sm text-slate-300">
+              <div className="flex justify-between"><dt>Siniflər</dt><dd>{teacherSummary?.classes ?? 0}</dd></div>
+              <div className="flex justify-between gap-3"><dt>Siniflərdə qeydiyyat</dt><dd>{teacherSummary?.students ?? 0}</dd></div>
+            </dl>
+            <Link href="/teacher" className="secondary-action mt-5">Sinifləri idarə et</Link>
+          </section>
+        ) : rank ? (
         <section className="profile-rank-card relative overflow-hidden rounded-2xl border border-emerald-300/12 p-6">
           <div className="cyber-grid absolute inset-0 opacity-[0.12]" />
           <div className="relative"><div className="flex items-center justify-between"><span className="grid size-12 place-items-center rounded-2xl border border-emerald-300/20 bg-emerald-300/10 text-emerald-300"><ShieldCheck className="size-6" /></span><span className="rounded-full border border-white/[0.07] bg-black/20 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-slate-500">Səviyyə {String(rank.level).padStart(2, "0")}</span></div><p className="mt-6 text-[10px] font-semibold uppercase tracking-[0.15em] text-emerald-400">Cari rütbə</p><h2 className="mt-1 text-2xl font-semibold text-white">{rank.name}</h2><p className="mt-2 text-xs leading-5 text-slate-500">{rank.nextThreshold ? `Növbəti rütbəyə ${remaining.toLocaleString("az-AZ")} XP qalıb.` : "Ən yüksək rütbədəsən."}</p><div className="mt-5 h-1.5 overflow-hidden rounded-full bg-white/[0.06]"><div className="h-full rounded-full bg-gradient-to-r from-red-500 to-emerald-400" style={{ width: `${rank.percent}%` }} /></div><div className="mt-2 flex justify-between font-mono text-[9px] text-slate-600"><span>{rank.currentPoints.toLocaleString("az-AZ")} XP</span><span>{rank.nextThreshold ? `${rank.nextThreshold.toLocaleString("az-AZ")} XP` : "MAX"}</span></div></div>
         </section>
+        ) : null}
 
         <section className="rounded-2xl border border-red-300/10 bg-[#1a1d1f] p-5">
           <h2 className="text-sm font-semibold text-white">Bildiriş seçimləri</h2>
           <div className="mt-4 space-y-2.5">
             <Toggle label="Yeni Room-lar" description="Yeni təlim yayımlananda xəbər al" enabled={notifications.newRooms} onChange={(value) => setNotifications((current) => ({ ...current, newRooms: value }))} />
-            <Toggle label="Seriya xatırlatması" description="Gündəlik seriyanı itirməzdən əvvəl xatırlat" enabled={notifications.streak} onChange={(value) => setNotifications((current) => ({ ...current, streak: value }))} />
+            {!isTeacher && <Toggle label="Seriya xatırlatması" description="Gündəlik seriyanı itirməzdən əvvəl xatırlat" enabled={notifications.streak} onChange={(value) => setNotifications((current) => ({ ...current, streak: value }))} />}
             <Toggle label="Sinif reytinqi" description="Sıralamadakı dəyişiklikləri göstər" enabled={notifications.leaderboard} onChange={(value) => setNotifications((current) => ({ ...current, leaderboard: value }))} />
           </div>
         </section>

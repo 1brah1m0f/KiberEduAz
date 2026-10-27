@@ -62,3 +62,17 @@ test("signed-in mobile navigation keeps public home and about access", () => {
     assert.ok(items.some((item) => item.kind === "link" && item.href === "/about"));
   }
 });
+
+
+test("teachers focus on classes while students retain learning navigation", () => {
+  const teacherLinks = navigationFor("TEACHER", false).map((item) => item.href);
+  const mobileTeacherLinks = mobileNavigationFor("TEACHER", false, true).filter((item) => item.kind === "link").map((item) => item.href);
+  for (const links of [teacherLinks, mobileTeacherLinks]) {
+    assert.ok(links.includes("/teacher"));
+    assert.equal(links.includes("/rooms"), false);
+    assert.equal(links.includes("/roadmap"), false);
+  }
+  const studentLinks = navigationFor("STUDENT", false).map((item) => item.href);
+  assert.ok(studentLinks.includes("/rooms"));
+  assert.ok(studentLinks.includes("/roadmap"));
+});

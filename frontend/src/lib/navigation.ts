@@ -54,9 +54,7 @@ export function navigationFor(role: UserRole | undefined, pending: boolean): Nav
   if (role === "TEACHER") {
     return [
       link("Ana səhifə", "/", "home"),
-      link("Müəllim", "/teacher", "dashboard"),
-      link("Room-lar", "/rooms", "rooms"),
-      link("Roadmap", "/roadmap", "roadmap"),
+      link("Siniflərim", "/teacher", "dashboard"),
       link("Haqqımızda", "/about", "about"),
       link("FAQ", "/faq", "faq"),
       link("Əlaqə", "/contact", "contact"),
