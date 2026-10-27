@@ -26,6 +26,8 @@ function slugify(value: string): string {
 export function TeacherContentManager({ initialPaths, initialRooms }: { initialPaths: PathTreeNode[]; initialRooms: RoomSummary[] }) {
   const [paths, setPaths] = useState(initialPaths);
   const [rooms, setRooms] = useState(initialRooms);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
   const [roomsExpanded, setRoomsExpanded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -136,7 +138,7 @@ export function TeacherContentManager({ initialPaths, initialRooms }: { initialP
   }
 
 
-  const roomList = getProgressiveListState(rooms, roomsExpanded);
+  const roomList = getProgressiveListState(rooms.filter((room) => (statusFilter === "ALL" || room.status === statusFilter) && `${room.title} ${room.path} ${room.module}`.toLocaleLowerCase("az").includes(query.toLocaleLowerCase("az"))), roomsExpanded);
   return (
     <section className="space-y-6" aria-labelledby="teacher-content-heading">
       <header>
@@ -228,7 +230,12 @@ export function TeacherContentManager({ initialPaths, initialRooms }: { initialP
         </Panel>
       </div>
 
-      <Panel title="Room-ların" icon={<Check className="size-4" />}>
+      <Panel title="Mövcud Room-lar" icon={<Check className="size-4" />}>
+        <div className="mb-5 flex flex-col gap-3 sm:flex-row">
+          <input aria-label="Room axtar" placeholder="Ad, modul və ya istiqamət üzrə axtar…" value={query} onChange={(event) => { setQuery(event.target.value); setRoomsExpanded(false); }} className="panel-input flex-1" />
+          <select aria-label="Room statusu" value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setRoomsExpanded(false); }} className="panel-input sm:!w-auto"><option value="ALL">Bütün Room-lar ({rooms.length})</option><option value="DRAFT">Təsdiq gözləyənlər</option><option value="PUBLISHED">Yayımlanmış</option><option value="ARCHIVED">Arxiv</option></select>
+        </div>
+        {rooms.length > 0 && roomList.visibleItems.length === 0 && <p role="status" className="py-4 text-sm text-slate-400">Axtarışa uyğun Room tapılmadı.</p>}
         <div className="divide-y divide-white/[0.06]">
           {rooms.length === 0 && <p className="py-4 text-sm text-slate-500">Hələ Room yoxdur.</p>}
           {roomList.visibleItems.map((room) => (

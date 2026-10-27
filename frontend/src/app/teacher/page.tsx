@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { TeacherContentManager } from "@/components/teacher/teacher-content-manager";
-import { TeacherConsole } from "@/components/teacher/teacher-console";
+import { TeacherWorkspace } from "@/components/teacher/teacher-workspace";
 import { apiFetch } from "@/lib/api/server";
 import { requireProfile } from "@/lib/api/viewer";
 import type { ClassSummary, ClassDetail, PathTreeNode, RoomSummary } from "@/lib/api/types";
@@ -28,14 +27,7 @@ export default async function TeacherPage() {
 
   return (
     <main className="flex-1">
-      <TeacherConsole
-        profile={profile}
-        initialDetails={details}
-        initialClasses={classes}
-      />
-      <div className="mx-auto max-w-[1440px] px-4 pb-10 sm:px-6 lg:px-10">
-        <TeacherContentManager initialPaths={paths} initialRooms={rooms} />
-      </div>
+      <TeacherWorkspace profile={profile} classes={classes} details={details} paths={paths} rooms={rooms} />
     </main>
   );
 }

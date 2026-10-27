@@ -29,6 +29,9 @@ type Props = {
 };
 
 export function TeacherConsole({ profile, initialDetails, initialClasses }: Props) {
+  const [studentQuery, setStudentQuery] = useState("");
+  const [studentSort, setStudentSort] = useState("xp");
+  const [studentFilter, setStudentFilter] = useState("all");
   const [details, setDetails] = useState(initialDetails);
   const [classes, setClasses] = useState(initialClasses);
   const [activeClassId, setActiveClassId] = useState(initialClasses[0]?.id ?? "");
@@ -47,6 +50,7 @@ export function TeacherConsole({ profile, initialDetails, initialClasses }: Prop
 
   async function loadClass(id: string): Promise<boolean> {
     if (!id) return false;
+    setStudentQuery("");
     setActiveClassId(id);
     setStudentsExpanded(false);
     setLoadingClassId(id);
@@ -165,7 +169,11 @@ export function TeacherConsole({ profile, initialDetails, initialClasses }: Prop
   const students = [...(classDetail?.students ?? [])].sort(
     (a, b) => (b.stats?.totalPoints ?? 0) - (a.stats?.totalPoints ?? 0) || a.id.localeCompare(b.id),
   );
-  const studentList = getProgressiveListState(students, studentsExpanded);
+  const filteredStudents = students.filter((student) =>
+    `${student.fullName ?? ""} ${student.email}`.toLocaleLowerCase("az").includes(studentQuery.toLocaleLowerCase("az")) &&
+    (studentFilter === "all" || (studentFilter === "completed" ? (student.stats?.roomsCompleted ?? 0) > 0 : (student.stats?.roomsCompleted ?? 0) === 0)),
+  ).sort((a, b) => studentSort === "name" ? (a.fullName ?? a.email).localeCompare(b.fullName ?? b.email, "az") : studentSort === "rooms" ? (b.stats?.roomsCompleted ?? 0) - (a.stats?.roomsCompleted ?? 0) || (b.stats?.totalPoints ?? 0) - (a.stats?.totalPoints ?? 0) : 0);
+  const studentList = getProgressiveListState(filteredStudents, studentsExpanded);
   const allStudents = [...new Map(details.flatMap((item) => item.students).map((student) => [student.id, student])).values()];
   const activeStudents = allStudents.filter((student) => (student.stats?.roomsCompleted ?? 0) > 0).length;
   const selectedPoints = students.reduce((sum, student) => sum + (student.stats?.totalPoints ?? 0), 0);
@@ -246,8 +254,9 @@ export function TeacherConsole({ profile, initialDetails, initialClasses }: Prop
                 key={item.id}
                 type="button"
                 onClick={() => void loadClass(item.id)}
-                disabled={loadingClassId !== null}
-                className={`flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left text-sm ${
+                disabled={loadingClassId !== null || busy}
+                aria-pressed={activeClassId === item.id}
+                className={`flex w-full items-center justify-between rounded-xl border px-4 py-4 text-left text-sm transition-all hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 ${
                   activeClassId === item.id
                     ? "border-emerald-300/25 bg-emerald-300/[0.07] text-emerald-100"
                     : "border-transparent text-slate-400 hover:bg-white/[0.03]"
@@ -281,6 +290,13 @@ export function TeacherConsole({ profile, initialDetails, initialClasses }: Prop
             <>
               <p className="mb-4 text-sm text-slate-400">{students.length} şagird · {selectedPoints.toLocaleString("az-AZ")} ümumi XP · Sıralama XP-yə görədir; bərabər XP eyni yeri tutur.</p>
               <button type="button" disabled={loadingClassId !== null} onClick={() => void loadClass(activeClassId)} className="secondary-action mb-4">{loadingClassId ? "Yüklənir…" : "Vəziyyəti yenilə"}</button>
+              {students.length > 0 && <div className="mb-6 grid gap-3 sm:grid-cols-3">{students.slice(0, 3).map((student, index) => <div key={student.id} className="rounded-xl border border-emerald-300/15 bg-emerald-300/[0.04] p-4"><p className="text-xs font-semibold text-emerald-300">#{1 + students.filter((other) => (other.stats?.totalPoints ?? 0) > (student.stats?.totalPoints ?? 0)).length} · {index === 0 ? "Sinif lideri" : "İlk üçlük"}</p><p className="mt-2 break-words text-sm font-semibold text-white">{student.fullName ?? student.email}</p><p className="mt-2 font-mono text-sm text-slate-300">{(student.stats?.totalPoints ?? 0).toLocaleString("az-AZ")} XP</p></div>)}</div>}
+              <div className="mb-5 grid gap-3 sm:grid-cols-3">
+                <input aria-label="Şagird axtar" value={studentQuery} placeholder="Ad və ya e-poçt axtar…" onChange={(event) => { setStudentQuery(event.target.value); setStudentsExpanded(false); }} className="panel-input" />
+                <select aria-label="Şagird sıralaması" value={studentSort} onChange={(event) => { setStudentSort(event.target.value); setStudentsExpanded(false); }} className="panel-input"><option value="xp">XP-yə görə</option><option value="rooms">Bitirilmiş otaqlara görə</option><option value="name">Ada görə</option></select>
+                <select aria-label="Şagird irəliləyişi" value={studentFilter} onChange={(event) => { setStudentFilter(event.target.value); setStudentsExpanded(false); }} className="panel-input"><option value="all">Bütün şagirdlər</option><option value="completed">Otaq bitirənlər</option><option value="needs-help">Hələ otaq bitirməyənlər</option></select>
+              </div>
+              {!loadingClassId && students.length > 0 && filteredStudents.length === 0 && <p role="status" className="py-4 text-sm text-slate-400">Filtrlərə uyğun şagird tapılmadı.</p>}
               <form onSubmit={addStudent} className="mb-5 flex flex-col gap-3 sm:flex-row">
                 <input
                   aria-label="Şagirdin e-poçtu"
