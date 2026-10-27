@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { TeacherContentManager } from "@/components/teacher/teacher-content-manager";
 import { TeacherConsole } from "@/components/teacher/teacher-console";
 import { apiFetch } from "@/lib/api/server";
 import { requireProfile } from "@/lib/api/viewer";
-import type { ClassSummary, ClassDetail } from "@/lib/api/types";
+import type { ClassSummary, ClassDetail, PathTreeNode, RoomSummary } from "@/lib/api/types";
 import { homePathFor } from "@/lib/auth/home-path";
 
 export const metadata: Metadata = {
@@ -18,7 +19,11 @@ export default async function TeacherPage() {
     redirect(homePathFor(profile));
   }
 
-  const classes = await apiFetch<ClassSummary[]>("/classes");
+  const [classes, paths, rooms] = await Promise.all([
+    apiFetch<ClassSummary[]>("/classes"),
+    apiFetch<PathTreeNode[]>("/paths"),
+    apiFetch<RoomSummary[]>("/rooms"),
+  ]);
   const details = await Promise.all(classes.map((item) => apiFetch<ClassDetail>(`/classes/${item.id}`)));
 
   return (
@@ -28,6 +33,9 @@ export default async function TeacherPage() {
         initialDetails={details}
         initialClasses={classes}
       />
+      <div className="mx-auto max-w-[1440px] px-4 pb-10 sm:px-6 lg:px-10">
+        <TeacherContentManager initialPaths={paths} initialRooms={rooms} />
+      </div>
     </main>
   );
 }
