@@ -45,6 +45,9 @@ export type LocalQuestion = {
   prompt: string;
   format: string | null;
   points: number;
+  options?: string[];
+  correctIndex?: number;
+  explanation?: string;
 };
 
 export type LocalRoomTask = {

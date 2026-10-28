@@ -27,12 +27,15 @@ import {
   solveLocalQuestion,
   type LocalProgressState,
 } from "@/lib/content/local-progress";
+import { checkLocalChoice } from "@/lib/content/local-choice";
 import type { LocalRoomDetail } from "@/lib/content/types";
 
 export function LocalLessonPlayer({ room }: { room: LocalRoomDetail }) {
   const [progressState, setProgressState] = useState<LocalProgressState>(emptyLocalProgress);
   const [currentTaskIndex, setCurrentTaskIndex] = useState(0);
   const [ready, setReady] = useState(false);
+  const [selections, setSelections] = useState<Record<string, number>>({});
+  const [answerErrors, setAnswerErrors] = useState<Record<string, string>>({});
   const [pendingId, setPendingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -95,6 +98,17 @@ export function LocalLessonPlayer({ room }: { room: LocalRoomDetail }) {
 
   function markQuestion(questionId: string, points: number) {
     if (!currentTask || solvedQuestionIds.includes(questionId) || pendingId) return;
+    const question = currentTask.questions.find((item) => item.id === questionId);
+    if (question?.options?.length) {
+      const result = checkLocalChoice(question, selections[questionId]);
+      if (result !== "correct") {
+        const message = result === "missing" ? "Əvvəlcə bir variant seçin." : "Cavab düzgün deyil. Dərsdəki izahı yenidən yoxlayıb təkrar cəhd edin.";
+        setAnswerErrors((current) => ({ ...current, [questionId]: message }));
+        toast.error(message);
+        return;
+      }
+      setAnswerErrors((current) => ({ ...current, [questionId]: "" }));
+    }
     setPendingId(questionId);
     toast.loading("Cavab yoxlanılır…", { id: "answer-check" });
     window.setTimeout(() => {
@@ -115,6 +129,10 @@ export function LocalLessonPlayer({ room }: { room: LocalRoomDetail }) {
 
   function markTaskComplete() {
     if (!currentTask || currentCompleted || pendingId) return;
+    if (currentTask.questions.some((question) => question.options?.length && !solvedQuestionIds.includes(question.id))) {
+      toast.error("Tapşırığı bitirməzdən əvvəl variantlı sualları düzgün cavablandırın.");
+      return;
+    }
     setPendingId(currentTask.id);
     toast.loading("Progress saxlanılır…", { id: "lesson-save" });
     window.setTimeout(() => {
@@ -123,7 +141,7 @@ export function LocalLessonPlayer({ room }: { room: LocalRoomDetail }) {
       );
       setPendingId(null);
       if (stored) {
-        toast.success("Task tamamlandı", {
+        toast.success("Tapşırıq tamamlandı", {
           id: "lesson-save",
           description: "Room progress-i bu cihazda saxlanıldı.",
         });
@@ -197,12 +215,12 @@ export function LocalLessonPlayer({ room }: { room: LocalRoomDetail }) {
             <div className="border-b border-white/[0.07] bg-white/[0.015] px-5 py-4 sm:px-8">
               <div className="flex min-w-0 items-center gap-2 text-xs text-slate-500">
                 <FileText className="size-4 shrink-0 text-slate-400" />
-                <span className="shrink-0">Task {currentTaskIndex + 1}</span><span>/</span><span className="truncate">{currentTask.title}</span>
+                <span className="shrink-0">Tapşırıq {currentTaskIndex + 1}</span><span>/</span><span className="truncate">{currentTask.title}</span>
               </div>
             </div>
 
             <article className="mx-auto min-w-0 max-w-4xl px-4 py-7 sm:px-8 sm:py-10 lg:px-10">
-              <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-400">Task {String(currentTaskIndex + 1).padStart(2, "0")}</p>
+              <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-400">Tapşırıq {String(currentTaskIndex + 1).padStart(2, "0")}</p>
               <h3 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-white sm:text-4xl">{currentTask.title}</h3>
               <div className="mt-8"><LessonMarkdown>{currentTask.markdown}</LessonMarkdown></div>
 
@@ -221,8 +239,17 @@ export function LocalLessonPlayer({ room }: { room: LocalRoomDetail }) {
                             {question.format && <p className="mt-2 text-xs text-slate-500">Cavab formatı: {question.format}</p>}
                           </div>
                         </div>
+                        {question.options && <fieldset className="mt-5 space-y-2" disabled={solved || pending}>
+                          <legend className="mb-2 text-xs text-slate-400">Bir düzgün cavab seçin</legend>
+                          {question.options.map((option, index) => <label key={index} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-sm ${selections[question.id] === index ? "border-emerald-300/40 bg-emerald-300/[0.07] text-white" : "border-white/10 text-slate-300"}`}>
+                            <input type="radio" name={question.id} value={index} checked={selections[question.id] === index} onChange={() => { setSelections((current) => ({ ...current, [question.id]: index })); setAnswerErrors((current) => ({ ...current, [question.id]: "" })); }} className="mt-1 accent-emerald-400" />
+                            <span>{String.fromCharCode(65 + index)}. {option}</span>
+                          </label>)}
+                        </fieldset>}
+                        {answerErrors[question.id] && <p role="alert" className="mt-3 text-sm text-rose-300">{answerErrors[question.id]}</p>}
+                        {solved && question.explanation && <p role="status" className="mt-3 text-sm text-emerald-200">{question.explanation}</p>}
                         <button type="button" disabled={solved || pending} onClick={() => markQuestion(question.id, question.points)} className="mt-5 inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-white/[0.09] bg-white/[0.035] px-4 text-xs font-semibold text-slate-200 transition-all hover:-translate-y-0.5 hover:border-emerald-300/25 hover:text-emerald-200 disabled:cursor-default disabled:opacity-70">
-                          {pending ? <><Loader2 className="size-3.5 animate-spin" />Cavab yoxlanılır…</> : solved ? <><CheckCircle2 className="size-3.5 text-emerald-300" />Yoxlama tamamlandı</> : <><Sparkles className="size-3.5" />Anladım, qeyd et</>}
+                          {pending ? <><Loader2 className="size-3.5 animate-spin" />Cavab yoxlanılır…</> : solved ? <><CheckCircle2 className="size-3.5 text-emerald-300" />Yoxlama tamamlandı</> : <><Sparkles className="size-3.5" />{question.options ? "Cavabı yoxla" : "Anladım, qeyd et"}</>}
                         </button>
                       </section>
                     );
@@ -230,20 +257,20 @@ export function LocalLessonPlayer({ room }: { room: LocalRoomDetail }) {
                 </div>
               ) : (
                 <div className="mt-10 rounded-2xl border border-amber-200/12 bg-amber-200/[0.035] p-5 text-sm leading-6 text-amber-50/75">
-                  Əsas anlayışları öz sözlərinlə izah et. Hazır olduqda taskı tamamlanmış kimi qeyd et.
+                  Əsas anlayışları öz sözlərinlə izah et. Hazır olduqda tapşırığı tamamlanmış kimi qeyd et.
                 </div>
               )}
 
               <div className="mt-8 flex flex-col gap-3 border-t border-white/[0.07] pt-6 sm:flex-row sm:items-center sm:justify-between">
-                <button type="button" onClick={() => goToTask(Math.max(0, currentTaskIndex - 1))} disabled={currentTaskIndex === 0} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/[0.08] px-4 text-sm font-semibold text-slate-400 transition-colors hover:bg-white/[0.04] hover:text-white disabled:opacity-35"><ChevronLeft className="size-4" />Əvvəlki task</button>
+                <button type="button" onClick={() => goToTask(Math.max(0, currentTaskIndex - 1))} disabled={currentTaskIndex === 0} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/[0.08] px-4 text-sm font-semibold text-slate-400 transition-colors hover:bg-white/[0.04] hover:text-white disabled:opacity-35"><ChevronLeft className="size-4" />Əvvəlki tapşırıq</button>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   {!currentCompleted && (
                     <button type="button" onClick={markTaskComplete} disabled={pendingId !== null} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-red-500 px-5 text-sm font-bold text-white transition-all hover:-translate-y-0.5 hover:bg-red-400 disabled:opacity-60">
-                      {pendingId === currentTask.id ? <><Loader2 className="size-4 animate-spin" />Progress saxlanılır…</> : <><Check className="size-4" />Taskı tamamla</>}
+                      {pendingId === currentTask.id ? <><Loader2 className="size-4 animate-spin" />Progress saxlanılır…</> : <><Check className="size-4" />Tapşırığı tamamla</>}
                     </button>
                   )}
                   {currentCompleted && !isLastTask && (
-                    <button type="button" onClick={() => goToTask(currentTaskIndex + 1)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-400 px-5 text-sm font-bold text-emerald-950 transition-all hover:-translate-y-0.5 hover:bg-emerald-300">Növbəti task<ArrowRight className="size-4" /></button>
+                    <button type="button" onClick={() => goToTask(currentTaskIndex + 1)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-400 px-5 text-sm font-bold text-emerald-950 transition-all hover:-translate-y-0.5 hover:bg-emerald-300">Növbəti tapşırıq<ArrowRight className="size-4" /></button>
                   )}
                   {currentCompleted && isLastTask && progress === 100 && (
                     <span className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-300/[0.08] px-5 text-sm font-bold text-emerald-200"><CheckCircle2 className="size-4" />Room tamamlandı</span>
